@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teste de Dispositivo</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f4f4f4;
+      font-family: Arial, sans-serif;
+    }
+    video {
+      width: 80%;
+      max-width: 640px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+    .audio-controls {
+      display: flex;
+      align-items: center;
+      margin-top: 20px;
+      width: 80%;
+      max-width: 640px;
+    }
+    .volume-bar {
+      flex: 1;
+      height: 10px;
+      background: #ddd;
+      border-radius: 5px;
+      overflow: hidden;
+      margin-right: 10px;
+    }
+    .volume-level {
+      height: 100%;
+      background: #4caf50;
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+    button {
+      padding: 6px 12px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <video id="video" autoplay playsinline muted></video>
+  <div class="audio-controls">
+    <div class="volume-bar">
+      <div id="volumeLevel" class="volume-level"></div>
+    </div>
+    <button id="muteBtn">🔇</button>
+  </div>
+
+  <script>
+    const video = document.getElementById("video");
+    const volumeLevel = document.getElementById("volumeLevel");
+    const muteBtn = document.getElementById("muteBtn");
+
+    let audioContext;
+    let microphone;
+    let analyser;
+    let muted = false;
+
+    async function initMedia() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        video.srcObject = stream;
+
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioContext.createMediaStreamSource(stream);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+
+        source.connect(analyser);
+        microphone = stream.getAudioTracks()[0];
+
+        visualizeVolume();
+      } catch (err) {
+        alert("Erro ao acessar câmera ou microfone: " + err.message);
+        console.error(err);
+      }
+    }
+
+    function visualizeVolume() {
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+      function updateVolume() {
+        analyser.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          sum += dataArray[i];
+        }
+        const average = sum / dataArray.length;
+        const volumePercent = Math.min(100, (average / 128) * 100);
+        volumeLevel.style.width = volumePercent + "%";
+
+        requestAnimationFrame(updateVolume);
+      }
+
+      updateVolume();
+    }
+
+    muteBtn.addEventListener("click", () => {
+      if (!microphone) return;
+      muted = !muted;
+      microphone.enabled = !muted;
+      muteBtn.textContent = muted ? "🔈" : "🔇";
+    });
+
+    initMedia();
+  </script>
+</body>
+</html>
