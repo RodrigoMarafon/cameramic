@@ -66,6 +66,7 @@
     let audioContext;
     let microphone;
     let analyser;
+    let gainNode;
     let muted = false;
 
     async function initMedia() {
@@ -78,7 +79,13 @@
         analyser = audioContext.createAnalyser();
         analyser.fftSize = 256;
 
+        gainNode = audioContext.createGain();
+        gainNode.gain.value = 1;
+
         source.connect(analyser);
+        analyser.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
         microphone = stream.getAudioTracks()[0];
 
         visualizeVolume();
@@ -108,9 +115,9 @@
     }
 
     muteBtn.addEventListener("click", () => {
-      if (!microphone) return;
+      if (!microphone || !gainNode) return;
       muted = !muted;
-      microphone.enabled = !muted;
+      gainNode.gain.value = muted ? 0 : 1;
       muteBtn.textContent = muted ? "🔈" : "🔇";
     });
 
